@@ -1,36 +1,39 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import User from "../models/User.js";
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-export async function loginController(req, res) {
+const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.TOKEN_EXPIRES_IN || '7d' });
+
+exports.register = async (req,res) => {
+  const { name, email, password, role='employee', employeeId, department } = req.body;
   try {
-    const { username, password } = req.body;
-
-    const token = jwt.sign({ username }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    return res.json({ success: true, token });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    if (!name || !email || !password) return res.status(400).json({ message: 'Name, email and password are required' });
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'Email already used' });
+    const user = await User.create({ name, email, password, role, employeeId, department });
+    const token = signToken(user._id);
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, employeeId: user.employeeId, avatar: user.avatar } });
+  } catch(err) {
+    console.error('Register error', err);
+    res.status(500).json({ message: 'Server error' });
   }
-}
+};
 
-export async function registerController(req, res) {
+exports.login = async (req,res) => {
+  const { email, password } = req.body;
   try {
-    const { username, password, email } = req.body;
-
-    const hashed = await bcrypt.hash(password, 12);
-
-    await User.create({ username, email, password: hashed });
-    let token = jwt.sign({ username }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    
-    res.cookie("token",token)
-    return res.status(201).json({ success: true, message: "User created",token: token });
+    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    const matched = await user.matchPassword(password);
+    if (!matched) return res.status(400).json({ message: 'Invalid credentials' });
+    const token = signToken(user._id);
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, employeeId: user.employeeId, avatar: user.avatar } });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error('Login error', err);
+    res.status(500).json({ message: 'Server error' });
   }
-}
+};
+
+exports.me = async (req,res) => {
+  res.json({ user: req.user });
+};

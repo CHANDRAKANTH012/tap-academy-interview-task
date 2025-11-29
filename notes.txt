@@ -1,0 +1,2 @@
+employee: emp1@example.com, password: password123,
+manager : manager@example.com, password123
