@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Employee Attendance System
 
 A MERN stack Employee Attendance System with role-based auth (manager / employee), attendance check-in/out, history, manager dashboards, and CSV export. Frontend built with Vite + React + Redux Toolkit + Tailwind (Vite plugin). Backend built with Node.js + Express + MongoDB (Mongoose).
